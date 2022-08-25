@@ -30,24 +30,33 @@ int main(void)
 
 
     /**
-    * 1- GIVE OPENGL THE DATA
+    * 1- GIVE OPENGL THE DATA AND BIND BUFFER
     **/
     float positions[6] = {
         -0.5f, -0.5f, //vertex 1 - index 0
         0.0f,   0.5f, //vertex 2 - index 1
         0.5f,  -0.5f //vertex 3 - index 2
     };
-
+     
 
     unsigned int buffer;
     //Generate 1 buffer, pointer to unsigned int into which to write memory
     glGenBuffers(1, &buffer);
     //select/bind buffer
     glBindBuffer(GL_ARRAY_BUFFER, buffer);
-    
+     
     //Put data into buffer - type of buffer, size of buffer/data, 
     glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(float), positions, GL_STATIC_DRAW);
 
+    /**
+    * 2- SPECIFY LAYOUT OF DATA
+    */
+    //Can define and enable as long a buffer has been bound (as above)
+    //index of 0 because first attribute, 2 float represent a single attribute/vertex, type of data = floats, non-normalized as floats are already normalized, # bytes between each vertex/offset to next vertex, offset to the next attribute i.e. texture coord
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
+    glEnableVertexAttribArray(0);
+
+    //glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
