@@ -1,7 +1,47 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
+#include <fstream>
+#include <string>
+#include <sstream>
 
+struct ShaderProgramSource {
+    std::string VertexSource;
+    std::string FragmentSource;
+};
+
+/**
+* Parses file containing shader code
+* return - struct containing code for each type of shader
+**/
+static ShaderProgramSource ParseShader(const std::string& filePath) {
+    std::ifstream stream(filePath); //opens file
+
+    enum class ShaderType {
+        NONE = -1, VERTEX = 0, FRAGMENT = 1
+    };
+
+    std::string line;
+    std::stringstream ss[2];
+    ShaderType type = ShaderType::NONE;
+    while (getline(stream, line)) {
+        if (line.find("#shader") != std::string::npos) { //if found #shader in that line
+            if (line.find("vertex") != std::string::npos) {
+                // set mode to vertex
+                type = ShaderType::VERTEX;
+            }
+            else if (line.find("fragment") != std::string::npos) {
+                // set mode to fragment
+                type = ShaderType::FRAGMENT;
+            }
+        }
+        else{
+            ss[(int)type] << line << '\n';
+        }        
+    }
+
+    return { ss[0].str(), ss[1].str() };
+}
 
 static unsigned int CompileShader(unsigned int type, const std::string& source) {
     unsigned int id = glCreateShader(type);
@@ -115,30 +155,20 @@ int main(void)
     //glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 
-    // WRITE OUR FIRST SHADER
-    std::string vertexShader =
-        "#version 330 core\n"
-        "\n"
-        "layout(location = 0) in vec4 position;\n" //vec4 because gl_Position is vec4 and opengl can convert our vec2 to vec4
-        "void main()\n"
-        "{\n"
-        "   gl_Position = position;\n"
-        "}\n";
+    // WRITE OUR FIRST SHADER   
+    ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
+    /*
+    std::string vertexShader = source.VertexSource;
+    std::string fragmentShader = source.FragmentSource;
 
-    std::string fragmentShader =
-        "#version 330 core\n"
-        "\n"
-        "layout(location = 0) out vec4 color;\n" //layout stuff not necessary
-        "void main()\n"
-        "{\n"
-        "   color = vec4(1.0, 0.0, 0.0, 1.0);\n" //colors in graphics programming are rgba floats between 0 and 1 - this is red
-        "}\n";
-    unsigned int shader = CreateShader(vertexShader, fragmentShader);
+    std::cout << "VERTEX" << std::endl;
+    std::cout << vertexShader << std::endl;
+    std::cout << "FRAGMENT" << std::endl;
+    std::cout << fragmentShader << std::endl;
+    */
+    unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
     //Bind program
     glUseProgram(shader);
-
-
-
 
 
     /* Loop until the user closes the window */
