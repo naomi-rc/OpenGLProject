@@ -128,13 +128,21 @@ int main(void)
     /**
     * 1- GIVE OPENGL THE DATA AND BIND BUFFER
     **/
-    float positions[6] = {
-        -0.5f, -0.5f, //vertex 1 - index 0
-        0.0f,   0.5f, //vertex 2 - index 1
-        0.5f,  -0.5f //vertex 3 - index 2
+    float positions[] = {
+        -0.5f, -0.5f, // 0
+        0.5f,  -0.5f, // 1
+        0.5f,   0.5f, // 2
+        -0.5f,  0.5f, // 3
     };
-     
 
+    unsigned int indices[] = {
+        0,1,2, 
+        2,3,0
+    };
+
+
+    // VERTEX BUFFER
+    
     unsigned int buffer;
     //Generate 1 buffer, pointer to unsigned int into which to write memory
     glGenBuffers(1, &buffer);
@@ -142,7 +150,8 @@ int main(void)
     glBindBuffer(GL_ARRAY_BUFFER, buffer);
      
     //Put data into buffer - type of buffer, size of buffer/data, 
-    glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(float), positions, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, 6 * 2 * sizeof(float), positions, GL_STATIC_DRAW);
+    
 
     /**
     * 2- SPECIFY LAYOUT OF DATA
@@ -152,20 +161,22 @@ int main(void)
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
     glEnableVertexAttribArray(0); //can come before or after glVertexAttribPointer, as long as buffer has been bound
 
-    //glBindBuffer(GL_ARRAY_BUFFER, 0);
+    //glBindBuffer(GL_ARRAY_BUFFER, 0);  //empties buffer
+
+
+    // INDEX BUFFER
+    unsigned int ibo;  //Index Buffer Object - must be unsigned; can be short or char for performance
+    //Generate 1 buffer, pointer to unsigned int into which to write memory
+    glGenBuffers(1, &ibo);
+    //select/bind buffer
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+
+    //Put data into buffer - type of buffer, size of buffer/data, 
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned int), indices, GL_STATIC_DRAW);  //sends data to GPU
 
 
     // WRITE OUR FIRST SHADER   
     ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
-    /*
-    std::string vertexShader = source.VertexSource;
-    std::string fragmentShader = source.FragmentSource;
-
-    std::cout << "VERTEX" << std::endl;
-    std::cout << vertexShader << std::endl;
-    std::cout << "FRAGMENT" << std::endl;
-    std::cout << fragmentShader << std::endl;
-    */
     unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
     //Bind program
     glUseProgram(shader);
@@ -177,19 +188,14 @@ int main(void)
         /* Render here */
         glClear(GL_COLOR_BUFFER_BIT);
 
-        /*glBegin(GL_TRIANGLES);
-        glVertex2f(-0.5f, -0.5f);
-        glVertex2f(0.0f,   0.5f);
-        glVertex2f(0.5f,  -0.5f);
-        glEnd();*/
-
         /**
         * 2- TELL OPENGL HOW THE DATA IS LAYED OUT
         **/
         //Draw call type 1 : Type of primitive, start index of vertices, number of vertices
-        glDrawArrays(GL_TRIANGLES, 0, 3); //used when we don't have an index buffer; draws from the last bound buffer (step 1)
+        //glDrawArrays(GL_TRIANGLES, 0, 6); //used when we don't have an index buffer; draws from the last bound buffer (step 1)
+        
         //Draw call type 2 : Type of primitive, number of vertices, type of index data
-        //glDrawElements(GL_TRIANGLES, 3, ); //used with index buffer
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr); //used with index buffer
 
         /* Swap front and back buffers */
         glfwSwapBuffers(window);
