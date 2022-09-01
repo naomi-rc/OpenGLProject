@@ -13,8 +13,9 @@ void main()
 
 layout(location = 0) out vec4 color; //layout stuff not necessary
 
+uniform vec4 u_Color;
+
 void main()
-{
-   //color = vec4(0, 1.0, 0.58, 1.0); //colors in graphics programming are rgba floats between 0 and 1 - this is red
-   color = vec4(0.00, 1.0, 0.12, 1.0); //colors in graphics programming are rgba floats between 0 and 1 - this is red
+{   
+	color = u_Color;
 };

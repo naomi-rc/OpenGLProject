@@ -15,13 +15,6 @@ static void GLClearError() {
     while (glGetError() != GL_NO_ERROR);
 }
 
-static void GLCheckError() {
-    while (GLenum error = glGetError()) {
-        std::cout << "[OpenGL Error](" << error << ")" << std::endl;
-    }
-}
-
-
 static bool GLLogCall(const char* function, const char* file, int line) {
     while (GLenum error = glGetError()) {
         std::cout << "[OpenGL Error](" << error << ") :" << function << 
@@ -30,7 +23,6 @@ static bool GLLogCall(const char* function, const char* file, int line) {
     }
     return true;
 }
-
 
 struct ShaderProgramSource {
     std::string VertexSource;
@@ -146,6 +138,8 @@ int main(void)
     /* Make the window's context current */
     glfwMakeContextCurrent(window);
 
+    glfwSwapInterval(1);
+
     if (glewInit() != GLEW_OK)
         std::cout << "Error!" << std::endl;
 
@@ -177,7 +171,7 @@ int main(void)
     GLCall(glBindBuffer(GL_ARRAY_BUFFER, buffer));
      
     //Put data into buffer - type of buffer, size of buffer/data, 
-    GLCall(glBufferData(GL_ARRAY_BUFFER, 6 * 2 * sizeof(float), positions, GL_STATIC_DRAW));
+    GLCall(glBufferData(GL_ARRAY_BUFFER, 4 * 2 * sizeof(float), positions, GL_STATIC_DRAW));
     
 
     /**
@@ -208,12 +202,20 @@ int main(void)
     //Bind program
     GLCall(glUseProgram(shader));
 
+    // Use uniforms
+    GLCall(int location = glGetUniformLocation(shader, "u_Color")); // get location of variable - uses same name "u_Color" as in fragment shader code
+    ASSERT(location != -1); //if -1, could not find uniform - not necessarily error because could have been removed
+    GLCall(glUniform4f(location, 0.0f, 1.0f, 0.12f, 1.0f));
 
+    float r = 0.0f;
+    float increment = 0.05f;
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
     {
         /* Render here */
         GLCall(glClear(GL_COLOR_BUFFER_BIT));
+
+        GLCall(glUniform4f(location, r, 1.0f, 0.12f, 1.0f));
 
         /**
         * 2- TELL OPENGL HOW THE DATA IS LAYED OUT
@@ -222,10 +224,16 @@ int main(void)
         //glDrawArrays(GL_TRIANGLES, 0, 6); //used when we don't have an index buffer; draws from the last bound buffer (step 1)
         
         //Draw call type 2 : Type of primitive, number of vertices, type of index data
-        //GLClearError();
         GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr)); //used with index buffer
-        //GLCheckError();
-        //ASSERT(GLLogCall());
+
+
+
+        if (r > 1.0f)
+            increment = -0.05f;
+        else if (r < 0.0f)
+            increment = 0.05f;
+
+        r += increment;
 
         /* Swap front and back buffers */
         GLCall(glfwSwapBuffers(window));
