@@ -5,24 +5,11 @@
 #include <string>
 #include <sstream>
 
-#define ASSERT(x) if(!(x)) __debugbreak(); //specific to MSVC
-#define GLCall(x) GLClearError();\
-    x;\
-    ASSERT(GLLogCall(#x, __FILE__, __LINE__))
+#include "Renderer.h"
+#include "VertexBuffer.h"
+#include "IndexBuffer.h"
 
-static void GLClearError() {
-    // Clear all errors
-    while (glGetError() != GL_NO_ERROR);
-}
 
-static bool GLLogCall(const char* function, const char* file, int line) {
-    while (GLenum error = glGetError()) {
-        std::cout << "[OpenGL Error](" << error << ") :" << function << 
-            " " << file << ":" << line << std::endl;
-        return false;
-    }
-    return true;
-}
 
 struct ShaderProgramSource {
     std::string VertexSource;
@@ -149,131 +136,117 @@ int main(void)
 
     std::cout << "OPENGL VERSION : " << glGetString(GL_VERSION) << std::endl;
 
-
-    /**
-    * 1- GIVE OPENGL THE DATA AND BIND BUFFER
-    **/
-    float positions[] = {
-        -0.5f, -0.5f, // 0
-        0.5f,  -0.5f, // 1
-        0.5f,   0.5f, // 2
-        -0.5f,  0.5f, // 3
-    };
-
-    unsigned int indices[] = {
-        0,1,2, 
-        2,3,0
-    };
-
-
-    // GENERATE VAO FOR CORE PROFILE
-    unsigned int vao;
-    GLCall(glGenVertexArrays(1, &vao));
-    GLCall(glBindVertexArray(vao));
-
-
-    // VERTEX BUFFER
-    
-    unsigned int buffer;
-    //Generate 1 buffer, pointer to unsigned int into which to write memory
-    GLCall(glGenBuffers(1, &buffer));
-    //select/bind buffer
-    GLCall(glBindBuffer(GL_ARRAY_BUFFER, buffer));
-     
-    //Put data into buffer - type of buffer, size of buffer/data, 
-    GLCall(glBufferData(GL_ARRAY_BUFFER, 4 * 2 * sizeof(float), positions, GL_STATIC_DRAW));
-    
-
-    /**
-    * 2- SPECIFY LAYOUT OF DATA
-    */
-    //Can define and enable as long a buffer has been bound (as above)
-    //index of 0 because first attribute, 2 float represent a single attribute/vertex, type of data = floats, non-normalized as floats are already normalized, stride - # bytes between each vertex/offset to next vertex, offset to the next attribute i.e. texture coord
-    GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0)); // LINKS BUFFER WITH VAO
-    GLCall(glEnableVertexAttribArray(0)); //can come before or after glVertexAttribPointer, as long as buffer has been bound
-
-    //glBindBuffer(GL_ARRAY_BUFFER, 0);  //empties buffer
-
-
-    // INDEX BUFFER
-    unsigned int ibo;  //Index Buffer Object - must be unsigned; can be short or char for performance
-    //Generate 1 buffer, pointer to unsigned int into which to write memory
-    GLCall(glGenBuffers(1, &ibo));
-    //select/bind buffer
-    GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo));
-
-    //Put data into buffer - type of buffer, size of buffer/data, 
-    GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned int), indices, GL_STATIC_DRAW));  //sends data to GPU
-
-
-    // WRITE OUR FIRST SHADER   
-    ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
-    unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
-    //Bind program
-    GLCall(glUseProgram(shader));
-
-    // Use uniforms
-    GLCall(int location = glGetUniformLocation(shader, "u_Color")); // get location of variable - uses same name "u_Color" as in fragment shader code
-    ASSERT(location != -1); //if -1, could not find uniform - not necessarily error because could have been removed
-    GLCall(glUniform4f(location, 0.0f, 1.0f, 0.12f, 1.0f));
-
-
-
-    // Unbind everything
-    GLCall(glBindVertexArray(0));
-    GLCall(glUseProgram(0));
-    GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
-    GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
-
-
-
-    float r = 0.0f;
-    float increment = 0.05f;
-    /* Loop until the user closes the window */
-    while (!glfwWindowShouldClose(window))
     {
-        /* Render here */
-        GLCall(glClear(GL_COLOR_BUFFER_BIT));
+        /**
+        * 1- GIVE OPENGL THE DATA AND BIND BUFFER
+        **/
+        float positions[] = {
+            -0.5f, -0.5f, // 0
+            0.5f,  -0.5f, // 1
+            0.5f,   0.5f, // 2
+            -0.5f,  0.5f, // 3
+        };
 
-        GLCall(glUseProgram(shader));
+        unsigned int indices[] = {
+            0,1,2,
+            2,3,0
+        };
 
-        GLCall(glUniform4f(location, r, 1.0f, 0.12f, 1.0f));
 
-        // THESE THREE LINES NO LONGER NEEDED WHITH CORE PROFILE AND GENERATED VAO
-        //GLCall(glBindBuffer(GL_ARRAY_BUFFER, buffer));
-        //GLCall(glEnableVertexAttribArray(0));
-        //GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));
-        GLCall(glBindVertexArray(vao)); //NO LONGER BINDING BUFFER AT ALL, JUST VERTEX ARRAY AND INDEX BUFFER
-        GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo));
+        // GENERATE VAO FOR CORE PROFILE
+        unsigned int vao;
+        GLCall(glGenVertexArrays(1, &vao));
+        GLCall(glBindVertexArray(vao));
+
+
+        // VERTEX BUFFER
+        VertexBuffer vb(positions, 4 * 2 * sizeof(float));
 
 
         /**
-        * 2- TELL OPENGL HOW THE DATA IS LAYED OUT
-        **/
-        //Draw call type 1 : Type of primitive, start index of vertices, number of vertices
-        //glDrawArrays(GL_TRIANGLES, 0, 6); //used when we don't have an index buffer; draws from the last bound buffer (step 1)
-        
-        //Draw call type 2 : Type of primitive, number of vertices, type of index data
-        GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr)); //used with index buffer
+        * 2- SPECIFY LAYOUT OF DATA
+        */
+        //Can define and enable as long a buffer has been bound (as above)
+        //index of 0 because first attribute, 2 float represent a single attribute/vertex, type of data = floats, non-normalized as floats are already normalized, stride - # bytes between each vertex/offset to next vertex, offset to the next attribute i.e. texture coord
+        GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0)); // LINKS BUFFER WITH VAO
+        GLCall(glEnableVertexAttribArray(0)); //can come before or after glVertexAttribPointer, as long as buffer has been bound
+
+        //glBindBuffer(GL_ARRAY_BUFFER, 0);  //empties buffer
+
+
+        // INDEX BUFFER
+        IndexBuffer ib(indices, 6);
+
+
+        // WRITE OUR FIRST SHADER   
+        ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
+        unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
+        //Bind program
+        GLCall(glUseProgram(shader));
+
+        // Use uniforms
+        GLCall(int location = glGetUniformLocation(shader, "u_Color")); // get location of variable - uses same name "u_Color" as in fragment shader code
+        ASSERT(location != -1); //if -1, could not find uniform - not necessarily error because could have been removed
+        GLCall(glUniform4f(location, 0.0f, 1.0f, 0.12f, 1.0f));
 
 
 
-        if (r > 1.0f)
-            increment = -0.05f;
-        else if (r < 0.0f)
-            increment = 0.05f;
+        // Unbind everything
+        GLCall(glBindVertexArray(0));
+        GLCall(glUseProgram(0));
+        GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
+        GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
 
-        r += increment;
 
-        /* Swap front and back buffers */
-        GLCall(glfwSwapBuffers(window));
 
-        /* Poll for and process events */
-        GLCall(glfwPollEvents());
+        float r = 0.0f;
+        float increment = 0.05f;
+        /* Loop until the user closes the window */
+        while (!glfwWindowShouldClose(window))
+        {
+            /* Render here */
+            GLCall(glClear(GL_COLOR_BUFFER_BIT));
+
+            GLCall(glUseProgram(shader));
+
+            GLCall(glUniform4f(location, r, 1.0f, 0.12f, 1.0f));
+
+            // THESE THREE LINES NO LONGER NEEDED WHITH CORE PROFILE AND GENERATED VAO
+            //GLCall(glBindBuffer(GL_ARRAY_BUFFER, buffer));
+            //GLCall(glEnableVertexAttribArray(0));
+            //GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));
+            GLCall(glBindVertexArray(vao)); //NO LONGER BINDING BUFFER AT ALL, JUST VERTEX ARRAY AND INDEX BUFFER
+            ib.Bind();
+
+
+            /**
+            * 2- TELL OPENGL HOW THE DATA IS LAYED OUT
+            **/
+            //Draw call type 1 : Type of primitive, start index of vertices, number of vertices
+            //glDrawArrays(GL_TRIANGLES, 0, 6); //used when we don't have an index buffer; draws from the last bound buffer (step 1)
+
+            //Draw call type 2 : Type of primitive, number of vertices, type of index data
+            GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr)); //used with index buffer
+
+
+
+            if (r > 1.0f)
+                increment = -0.05f;
+            else if (r < 0.0f)
+                increment = 0.05f;
+
+            r += increment;
+
+            /* Swap front and back buffers */
+            GLCall(glfwSwapBuffers(window));
+
+            /* Poll for and process events */
+            GLCall(glfwPollEvents());
+        }
+        //Clean up
+        GLCall(glDeleteProgram(shader));
     }
-    //Clean up
-    GLCall(glDeleteProgram(shader));
 
-    GLCall(glfwTerminate());
+    glfwTerminate();
     return 0;
 }
