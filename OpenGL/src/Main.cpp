@@ -124,8 +124,12 @@ int main(void)
     /* Initialize the library */
     if (!glfwInit())
         return -1;
+        
+    // Use core profile
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); //Without this, we are using GLFW_OPENGL_COMPAT_PROFILE
 
-    
 
     /* Create a windowed mode window and its OpenGL context */
     window = glfwCreateWindow(640, 480, "Hello World", NULL, NULL);
@@ -162,6 +166,12 @@ int main(void)
     };
 
 
+    // GENERATE VAO FOR CORE PROFILE
+    unsigned int vao;
+    GLCall(glGenVertexArrays(1, &vao));
+    GLCall(glBindVertexArray(vao));
+
+
     // VERTEX BUFFER
     
     unsigned int buffer;
@@ -178,8 +188,8 @@ int main(void)
     * 2- SPECIFY LAYOUT OF DATA
     */
     //Can define and enable as long a buffer has been bound (as above)
-    //index of 0 because first attribute, 2 float represent a single attribute/vertex, type of data = floats, non-normalized as floats are already normalized, # bytes between each vertex/offset to next vertex, offset to the next attribute i.e. texture coord
-    GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));
+    //index of 0 because first attribute, 2 float represent a single attribute/vertex, type of data = floats, non-normalized as floats are already normalized, stride - # bytes between each vertex/offset to next vertex, offset to the next attribute i.e. texture coord
+    GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0)); // LINKS BUFFER WITH VAO
     GLCall(glEnableVertexAttribArray(0)); //can come before or after glVertexAttribPointer, as long as buffer has been bound
 
     //glBindBuffer(GL_ARRAY_BUFFER, 0);  //empties buffer
@@ -207,6 +217,16 @@ int main(void)
     ASSERT(location != -1); //if -1, could not find uniform - not necessarily error because could have been removed
     GLCall(glUniform4f(location, 0.0f, 1.0f, 0.12f, 1.0f));
 
+
+
+    // Unbind everything
+    GLCall(glBindVertexArray(0));
+    GLCall(glUseProgram(0));
+    GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
+    GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
+
+
+
     float r = 0.0f;
     float increment = 0.05f;
     /* Loop until the user closes the window */
@@ -215,7 +235,17 @@ int main(void)
         /* Render here */
         GLCall(glClear(GL_COLOR_BUFFER_BIT));
 
+        GLCall(glUseProgram(shader));
+
         GLCall(glUniform4f(location, r, 1.0f, 0.12f, 1.0f));
+
+        // THESE THREE LINES NO LONGER NEEDED WHITH CORE PROFILE AND GENERATED VAO
+        //GLCall(glBindBuffer(GL_ARRAY_BUFFER, buffer));
+        //GLCall(glEnableVertexAttribArray(0));
+        //GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));
+        GLCall(glBindVertexArray(vao)); //NO LONGER BINDING BUFFER AT ALL, JUST VERTEX ARRAY AND INDEX BUFFER
+        GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo));
+
 
         /**
         * 2- TELL OPENGL HOW THE DATA IS LAYED OUT
