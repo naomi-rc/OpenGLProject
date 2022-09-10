@@ -8,6 +8,7 @@
 #include "Renderer.h"
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
+#include "VertexArray.h"
 
 
 
@@ -152,31 +153,19 @@ int main(void)
             2,3,0
         };
 
-
-        // GENERATE VAO FOR CORE PROFILE
-        unsigned int vao;
-        GLCall(glGenVertexArrays(1, &vao));
-        GLCall(glBindVertexArray(vao));
-
-
+        VertexArray va;
+        
         // VERTEX BUFFER
         VertexBuffer vb(positions, 4 * 2 * sizeof(float));
 
 
-        /**
-        * 2- SPECIFY LAYOUT OF DATA
-        */
-        //Can define and enable as long a buffer has been bound (as above)
-        //index of 0 because first attribute, 2 float represent a single attribute/vertex, type of data = floats, non-normalized as floats are already normalized, stride - # bytes between each vertex/offset to next vertex, offset to the next attribute i.e. texture coord
-        GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0)); // LINKS BUFFER WITH VAO
-        GLCall(glEnableVertexAttribArray(0)); //can come before or after glVertexAttribPointer, as long as buffer has been bound
-
-        //glBindBuffer(GL_ARRAY_BUFFER, 0);  //empties buffer
+        VertexBufferLayout layout;
+        layout.Push<float>(2);
+        va.AddBuffer(vb, layout);
 
 
         // INDEX BUFFER
         IndexBuffer ib(indices, 6);
-
 
         // WRITE OUR FIRST SHADER   
         ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
@@ -189,14 +178,11 @@ int main(void)
         ASSERT(location != -1); //if -1, could not find uniform - not necessarily error because could have been removed
         GLCall(glUniform4f(location, 0.0f, 1.0f, 0.12f, 1.0f));
 
-
-
         // Unbind everything
-        GLCall(glBindVertexArray(0));
+        va.Unbind();
         GLCall(glUseProgram(0));
         GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
         GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
-
 
 
         float r = 0.0f;
@@ -211,11 +197,7 @@ int main(void)
 
             GLCall(glUniform4f(location, r, 1.0f, 0.12f, 1.0f));
 
-            // THESE THREE LINES NO LONGER NEEDED WHITH CORE PROFILE AND GENERATED VAO
-            //GLCall(glBindBuffer(GL_ARRAY_BUFFER, buffer));
-            //GLCall(glEnableVertexAttribArray(0));
-            //GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));
-            GLCall(glBindVertexArray(vao)); //NO LONGER BINDING BUFFER AT ALL, JUST VERTEX ARRAY AND INDEX BUFFER
+            va.Bind();
             ib.Bind();
 
 
@@ -227,7 +209,6 @@ int main(void)
 
             //Draw call type 2 : Type of primitive, number of vertices, type of index data
             GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr)); //used with index buffer
-
 
 
             if (r > 1.0f)
