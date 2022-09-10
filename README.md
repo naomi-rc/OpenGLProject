@@ -1,3 +1,3 @@
 # OpenGLProject
 
-OpenGL tutorial by The Cherno
+Code-along OpenGL tutorial with The Cherno
